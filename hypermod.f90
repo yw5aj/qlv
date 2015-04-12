@@ -19,7 +19,7 @@ contains
         real(dp) :: mu(nterms), alpha(nterms), b(3, 3), lam2(3), lambar(3),&
             lbpow(3, nterms), det, lam(3), beta(3), gamma(3, 3), m(3, 3, 3),&
             d(3), dprime(3), i1, i3, ib(3, 3, 3, 3), dmterm1, dmterm2,&
-            dmterm3, dm(3, 3, 3, 3, 3), ccc(3, 3, 3, 3), b2(3, 3), d3
+            dmterm3, dm(3, 3, 3, 3, 3), ccc(3, 3, 3, 3)
         mu = isoprops(1::2)
         alpha = isoprops(2::2)
         det = m33det(f)
