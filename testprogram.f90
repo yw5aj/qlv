@@ -1,4 +1,4 @@
-program testogden
+program testprogram
     use umatutils, only: dp
     use hypermod, only: hyper, hyperpk2
     implicit none
@@ -9,4 +9,5 @@ program testogden
     call hyper(dfgrd1, props, size(props)/3, sigma, ccj)
     call hyperpk2(dfgrd1, props, size(props)/3, sigma, ccj, siso, svol)
     write (*, *) siso, svol
-end program testogden
+end program testprogram
+
