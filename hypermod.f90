@@ -8,18 +8,18 @@ module hypermod
     public hyper, hyperpk2
 
 contains
-    subroutine hyperiso(f, isoprops, nterms, sigma, ccj)
+    subroutine hyperiso(f, isoprops, sigma, ccj)
         !! Module for the isochoric part of Ogden hyperelastic material
         !! Used definition for Holzapfel's book
         !! isoprops : mu1, alpha1, mu2, alpha2, etc.
-        integer, intent(in) :: nterms
-        real(dp), intent(in) :: f(3, 3), isoprops(:)
+        real(dp), intent(in) :: f(3, 3), isoprops(nprops)
         real(dp), intent(out) :: sigma(3, 3), ccj(3, 3, 3, 3)
         integer :: i, j, k, l, n, k1, k2, a, c
-        real(dp) :: mu(nterms), alpha(nterms), b(3, 3), lam2(3), lambar(3),&
-            lbpow(3, nterms), det, lam(3), beta(3), gamma(3, 3), m(3, 3, 3),&
-            d(3), dprime(3), i1, i3, ib(3, 3, 3, 3), dmterm1, dmterm2,&
-            dmterm3, dm(3, 3, 3, 3, 3), ccc(3, 3, 3, 3)
+        real(dp) :: mu(size(props) / 2), alpha(size(props) / 2), b(3, 3),&
+            lam2(3), lambar(3), lbpow(3, size(props) / 2), det, lam(3),&
+            beta(3), gamma(3, 3), m(3, 3, 3), d(3), dprime(3), i1, i3,&
+            ib(3, 3, 3, 3), dmterm1, dmterm2, dmterm3, dm(3, 3, 3, 3, 3),&
+            ccc(3, 3, 3, 3)
         mu = isoprops(1::2)
         alpha = isoprops(2::2)
         det = m33det(f)
@@ -55,14 +55,14 @@ contains
             m(:, :, i) = (matmul(b, b) - (i1 - lam2(i)) * b +&
                 i3 / lam2(i) * delta) / d(i)
         end do
-        ! lambdabar_alpha, 3 x nterms
-        do n = 1, nterms
+        ! lambdabar_alpha, 3 x size(props) / 2
+        do n = 1, size(props) / 2
             lbpow(:, n) = lambar**(alpha(n))
         end do
         ! beta_i
         beta = 0
         do i = 1, 3
-            do n = 1, nterms
+            do n = 1, size(props) / 2
                 beta(i) = beta(i) + mu(n) * (lbpow(i, n) - sum(lbpow(:, n))/3)
             end do
         end do
@@ -70,7 +70,7 @@ contains
         gamma = 0
         do i = 1, 3
             do j = i, 3
-                do n = 1, nterms
+                do n = 1, size(props) / 2
                     if (i == j) then
                         gamma(i, j) = gamma(i, j) + mu(n) * alpha(n) * (&
                             lbpow(i, n)/3 + sum(lbpow(:, n))/9)
@@ -225,33 +225,34 @@ contains
         ccj = ccc2ccj(ccc, sigma)
     end subroutine hyperiso
 
-    subroutine hyper (f, props, nterms, sigma, ccj)
-        real(dp), intent(in) :: f(3, 3), props(:)
-        integer, intent(in) :: nterms
+    subroutine hyper (f, props, sigma, ccj)
+        real(dp), intent(in) :: f(3, 3), props(nprops)
         real(dp), intent(out) :: sigma(3, 3), ccj(3, 3, 3, 3)
-        real(dp) :: sigmaiso(3, 3), sigmavol(3, 3), propsiso(2*nterms),&
-            propsvol(nterms), ccjiso(3, 3, 3, 3), ccjvol(3, 3, 3, 3)
+        real(dp) :: sigmaiso(3, 3), sigmavol(3, 3),&
+            propsiso(2*size(props) / 2), propsvol(size(props) / 2),&
+            ccjiso(3, 3, 3, 3), ccjvol(3, 3, 3, 3)
         ! Assign material properties
-        propsiso = props(:2*nterms)
-        propsvol = props(2*nterms+1:)
+        propsiso = props(:2 * size(props) / 2)
+        propsvol = props(2 * size(props) / 2 + 1:)
         ! Calculate both parts separately
-        call hyperiso(f, propsiso, nterms, sigmaiso, ccjiso)
-        call hypervol(f, propsvol, nterms, sigmavol, ccjvol)
+        call hyperiso(f, propsiso, size(props) / 2, sigmaiso, ccjiso)
+        call hypervol(f, propsvol, size(props) / 2, sigmavol, ccjvol)
         ! Add them up
         sigma = sigmaiso + sigmavol
         ccj = ccjiso + ccjvol
     end subroutine hyper
 
-    subroutine hyperpk2 (f, props, nterms, sigma, ccj, siso, svol)
+    subroutine hyperpk2 (f, props, nprops, sigma, ccj, siso, svol)
         !! subroutine to include output of pk2 stress
-        real(dp), intent(in) :: f(3, 3), props(:)
-        integer, intent(in) :: nterms
+        real(dp), intent(in) :: f(3, 3), props(nprops)
+        integer, intent(in) :: nprops
         real(dp), intent(out) :: sigma(3, 3), ccj(3, 3, 3, 3), siso(3, 3),&
             svol(3, 3)
+        integer, parameter :: size(props) / 2 = size(props) / 2
         real(dp) :: sigmaiso(3, 3), sigmavol(3, 3), det, finv(3, 3)
         integer :: i
         ! Get the spatial representation
-        call hyper (f, props, nterms, sigma, ccj)
+        call hyper (f, props, size(props) / 2, sigma, ccj)
         sigmavol = sum([(sigma(i, i), i = 1, 3)]) / 3 * delta
         sigmaiso = sigma - sigmavol
         ! Convert to 2nd PK stress
