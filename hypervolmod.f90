@@ -7,14 +7,13 @@ module hypervolmod
     public hypervol
 
 contains
-    subroutine hypervol(f, d, nterms, sigma, ccj)
-        integer, intent(in) :: nterms
-        real(dp), intent(in) :: f(3, 3), d(nterms)
+    subroutine hypervol(f, d, sigma, ccj)
+        real(dp), intent(in) :: f(3, 3), d(:)
         real(dp), intent(out) :: sigma(3, 3), ccj(3, 3, 3, 3)
         integer :: i, j, k, l, n
         real(dp) :: p = 0, ptilde = 0, det, ccc(3, 3, 3, 3)
         det = m33det(f)
-        do n = 1, nterms
+        do n = 1, size(d)
             p = p + 2 * n * (det - 1) ** (2 * n - 1) / d(n)
             ptilde = ptilde + 2 * n * (det - 1) ** (2 * n - 2) * &
                 (2 * n * det - 1) / d(n)

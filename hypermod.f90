@@ -5,14 +5,14 @@ module hypermod
     use hypervolmod, only: hypervol
     implicit none
     private
-    public hyper, hyperpk2
+    public hyper
 
 contains
-    subroutine hyperiso(f, isoprops, sigma, ccj)
+    subroutine hyperiso(f, props, sigma, ccj)
         !! Module for the isochoric part of Ogden hyperelastic material
         !! Used definition for Holzapfel's book
-        !! isoprops : mu1, alpha1, mu2, alpha2, etc.
-        real(dp), intent(in) :: f(3, 3), isoprops(nprops)
+        !! props : mu1, alpha1, mu2, alpha2, etc.
+        real(dp), intent(in) :: f(3, 3), props(:)
         real(dp), intent(out) :: sigma(3, 3), ccj(3, 3, 3, 3)
         integer :: i, j, k, l, n, k1, k2, a, c
         real(dp) :: mu(size(props) / 2), alpha(size(props) / 2), b(3, 3),&
@@ -20,8 +20,8 @@ contains
             beta(3), gamma(3, 3), m(3, 3, 3), d(3), dprime(3), i1, i3,&
             ib(3, 3, 3, 3), dmterm1, dmterm2, dmterm3, dm(3, 3, 3, 3, 3),&
             ccc(3, 3, 3, 3)
-        mu = isoprops(1::2)
-        alpha = isoprops(2::2)
+        mu = props(1::2)
+        alpha = props(2::2)
         det = m33det(f)
         b = matmul(f, transpose(f))
         lam2 = m33eigvalsh(b)
@@ -226,40 +226,20 @@ contains
     end subroutine hyperiso
 
     subroutine hyper (f, props, sigma, ccj)
-        real(dp), intent(in) :: f(3, 3), props(nprops)
+        real(dp), intent(in) :: f(3, 3), props(:)
         real(dp), intent(out) :: sigma(3, 3), ccj(3, 3, 3, 3)
         real(dp) :: sigmaiso(3, 3), sigmavol(3, 3),&
-            propsiso(2*size(props) / 2), propsvol(size(props) / 2),&
+            propsiso(size(props) * 2 / 3), propsvol(size(props) / 3),&
             ccjiso(3, 3, 3, 3), ccjvol(3, 3, 3, 3)
         ! Assign material properties
-        propsiso = props(:2 * size(props) / 2)
-        propsvol = props(2 * size(props) / 2 + 1:)
+        propsiso = props(:size(props) * 2 / 3)
+        propsvol = props(size(props) * 2 / 3 + 1:)
         ! Calculate both parts separately
-        call hyperiso(f, propsiso, size(props) / 2, sigmaiso, ccjiso)
-        call hypervol(f, propsvol, size(props) / 2, sigmavol, ccjvol)
+        call hyperiso(f, propsiso, sigmaiso, ccjiso)
+        call hypervol(f, propsvol, sigmavol, ccjvol)
         ! Add them up
         sigma = sigmaiso + sigmavol
         ccj = ccjiso + ccjvol
     end subroutine hyper
-
-    subroutine hyperpk2 (f, props, nprops, sigma, ccj, siso, svol)
-        !! subroutine to include output of pk2 stress
-        real(dp), intent(in) :: f(3, 3), props(nprops)
-        integer, intent(in) :: nprops
-        real(dp), intent(out) :: sigma(3, 3), ccj(3, 3, 3, 3), siso(3, 3),&
-            svol(3, 3)
-        integer, parameter :: size(props) / 2 = size(props) / 2
-        real(dp) :: sigmaiso(3, 3), sigmavol(3, 3), det, finv(3, 3)
-        integer :: i
-        ! Get the spatial representation
-        call hyper (f, props, size(props) / 2, sigma, ccj)
-        sigmavol = sum([(sigma(i, i), i = 1, 3)]) / 3 * delta
-        sigmaiso = sigma - sigmavol
-        ! Convert to 2nd PK stress
-        det = m33det(f)
-        finv = m33inv(f)
-        siso = det * matmul(matmul(finv, sigmaiso), transpose(finv))
-        svol = det * matmul(matmul(finv, sigmavol), transpose(finv))
-    end subroutine hyperpk2
 
 end module hypermod
